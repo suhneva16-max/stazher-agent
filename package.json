@@ -1,0 +1,25 @@
+{
+  "name": "stazher-agent",
+  "version": "1.0.0",
+  "description": "GPT-агент для помощи директологу.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/suhneva16-max/stazher-agent.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "git+https://github.com/suhneva16-max/stazher-agent/issues"
+  },
+  "homepage": "https://github.com/suhneva16-max/stazher-agent#readme",
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "openai": "^6.37.0"
+  }
+}
