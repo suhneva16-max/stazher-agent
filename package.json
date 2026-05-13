@@ -20,6 +20,7 @@
   "homepage": "https://github.com/suhneva16-max/stazher-agent#readme",
   "dependencies": {
     "dotenv": "^17.4.2",
+    "fs-extra": "^11.3.5",
     "openai": "^6.37.0"
   }
 }

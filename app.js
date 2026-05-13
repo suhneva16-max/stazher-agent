@@ -1,7 +1,13 @@
 import OpenAI from "openai";
 import dotenv from "dotenv";
+import fs from "fs-extra";
 
 dotenv.config();
+
+const systemPrompt = fs.readFileSync(
+  "./prompts/system-directolog.md",
+  "utf-8"
+);
 
 const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -10,14 +16,17 @@ const client = new OpenAI({
 async function run() {
   const response = await client.chat.completions.create({
     model: "gpt-4.1-mini",
+
     messages: [
       {
         role: "system",
-        content: "Ты AI-директолог по имени Стажер.",
+        content: systemPrompt,
       },
+
       {
         role: "user",
-        content: "Проанализируй нишу строительства домов.",
+        content:
+          "Проанализируй целевую аудиторию для строительства домов под ключ.",
       },
     ],
   });
