@@ -9,6 +9,11 @@ const systemPrompt = fs.readFileSync(
   "utf-8"
 );
 
+const taskPrompt = fs.readFileSync(
+  "./projects/test-dom/task.md",
+  "utf-8"
+);
+
 const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
@@ -16,17 +21,14 @@ const client = new OpenAI({
 async function run() {
   const response = await client.chat.completions.create({
     model: "gpt-4.1-mini",
-
     messages: [
       {
         role: "system",
         content: systemPrompt,
       },
-
       {
         role: "user",
-        content:
-          "Проанализируй целевую аудиторию для строительства домов под ключ.",
+        content: taskPrompt,
       },
     ],
   });
