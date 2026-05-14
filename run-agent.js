@@ -1,7 +1,7 @@
 import OpenAI from "openai";
 import fs from "fs-extra";
 import dotenv from "dotenv";
-
+import { retrieveKnowledge } from "./retrieve-knowledge.js";
 dotenv.config();
 
 const client = new OpenAI({
@@ -66,7 +66,10 @@ const taskPrompt = fs.readFileSync(
   `./projects/${projectName}/task.md`,
   "utf-8"
 );
-
+const ragKnowledge = await retrieveKnowledge(
+  `${resultType} ${taskPrompt}`,
+  3
+);
 let contextText = "";
 
 for (const fileName of contextFiles) {
@@ -113,7 +116,9 @@ async function run() {
 # GLOBAL KNOWLEDGE
 
 ${globalKnowledge}
+# RAG KNOWLEDGE
 
+${ragKnowledge}
 # PROJECT KNOWLEDGE
 
 ${projectKnowledge}
