@@ -118,7 +118,7 @@ async function run() {
 ${globalKnowledge}
 # RAG KNOWLEDGE
 
-${ragKnowledge}
+${ragKnowledge.slice(0, 4000)}
 # PROJECT KNOWLEDGE
 
 ${projectKnowledge}

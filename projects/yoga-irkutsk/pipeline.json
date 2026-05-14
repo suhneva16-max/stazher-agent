@@ -1,0 +1,14 @@
+[
+  {
+    "task": "audience",
+    "context": []
+  },
+  {
+    "task": "analysis",
+    "context": ["audience"]
+  },
+  {
+    "task": "ads",
+    "context": ["audience", "analysis"]
+  }
+]
