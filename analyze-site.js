@@ -42,10 +42,8 @@ async function loadSiteText(siteUrl) {
 }
 
 async function run() {
-  const siteText = await loadSiteText(url);
-fs.writeFileSync(
-  `./projects/${projectName}/raw-site.txt`,
-  siteText,
+  const siteText = fs.readFileSync(
+  `./projects/${projectName}/raw-site-full.txt`,
   "utf-8"
 );
   const response = await openai.chat.completions.create({
