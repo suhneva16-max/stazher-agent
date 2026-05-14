@@ -18,8 +18,16 @@ if (!projectName || !resultType) {
   process.exit();
 }
 
+const promptPath =
+  `./prompts/tasks/${resultType}.md`;
+
+if (!fs.existsSync(promptPath)) {
+  console.log("Prompt не найден");
+  process.exit();
+}
+
 const systemPrompt = fs.readFileSync(
-  "./prompts/system-directolog.md",
+  promptPath,
   "utf-8"
 );
 
