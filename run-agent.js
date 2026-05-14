@@ -30,7 +30,38 @@ const systemPrompt = fs.readFileSync(
   promptPath,
   "utf-8"
 );
+const globalKnowledge = fs.readFileSync(
+  "./knowledge/direct-rules.md",
+  "utf-8"
+);
 
+const projectKnowledgePath =
+  `./projects/${projectName}/knowledge`;
+
+let projectKnowledge = "";
+
+if (fs.existsSync(projectKnowledgePath)) {
+
+  const knowledgeFiles =
+    fs.readdirSync(projectKnowledgePath);
+
+  for (const file of knowledgeFiles) {
+
+    const content =
+      fs.readFileSync(
+        `${projectKnowledgePath}/${file}`,
+        "utf-8"
+      );
+
+    projectKnowledge += `
+
+# FILE: ${file}
+
+${content}
+
+`;
+  }
+}
 const taskPrompt = fs.readFileSync(
   `./projects/${projectName}/task.md`,
   "utf-8"
@@ -78,16 +109,27 @@ async function run() {
         {
           role: "user",
           content: `
-ЗАДАЧА:
+
+# GLOBAL KNOWLEDGE
+
+${globalKnowledge}
+
+# PROJECT KNOWLEDGE
+
+${projectKnowledge}
+
+# TASK
 
 ${taskPrompt}
 
-КОНТЕКСТ:
+# CONTEXT
 
 ${contextText}
 
-Создай результат:
+# RESULT TYPE
+
 ${resultType}
+
 `,
         },
 
