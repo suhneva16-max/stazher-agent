@@ -34,7 +34,10 @@ const globalKnowledge = fs.readFileSync(
   "./knowledge/direct-rules.md",
   "utf-8"
 );
-
+const businessRules = fs.readFileSync(
+  "./knowledge/business-rules.md",
+  "utf-8"
+);
 const projectKnowledgePath =
   `./projects/${projectName}/knowledge`;
 
@@ -114,7 +117,9 @@ async function run() {
           content: `
 
 # GLOBAL KNOWLEDGE
+# BUSINESS RULES
 
+${businessRules}
 ${globalKnowledge}
 # RAG KNOWLEDGE
 

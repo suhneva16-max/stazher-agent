@@ -8,7 +8,11 @@
     "context": ["audience"]
   },
   {
-    "task": "ads",
+    "task": "campaigns",
     "context": ["audience", "analysis"]
+  },
+  {
+    "task": "ads",
+    "context": ["audience", "analysis", "campaigns"]
   }
 ]
