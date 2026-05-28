@@ -14,5 +14,28 @@
   {
     "task": "ads",
     "context": ["audience", "analysis", "campaigns"]
-  }
+  },
+  {
+    "task": "second-title",
+    "context": ["export-direct"]
+  },
+  {
+  "task": "check-second-title",
+  "context": ["second-title"]
+},
+{
+  "task": "score-second-title",
+  "context": ["second-title"]
+},
+{
+  "task": "rewrite-second-title",
+  "context": [
+    "score-second-title",
+    "knowledge/second-title-examples"
+  ]
+},
+{
+  "task": "score-second-title",
+  "context": ["rewrite-second-title"]
+}
 ]

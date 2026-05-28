@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Агент-директолог</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #f5f5f5; color: #1a1a1a; }
+  .container { max-width: 800px; margin: 0 auto; padding: 40px 20px; }
+  h1 { font-size: 28px; font-weight: 600; margin-bottom: 8px; }
+  .subtitle { color: #666; margin-bottom: 32px; }
+  .card { background: white; border-radius: 12px; padding: 24px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+  input { width: 100%; padding: 12px 16px; border: 1px solid #ddd; border-radius: 8px; font-size: 15px; margin-bottom: 12px; outline: none; }
+  input:focus { border-color: #0066ff; }
+  button { width: 100%; padding: 14px; background: #0066ff; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 500; cursor: pointer; transition: opacity 0.2s; }
+  button:hover { opacity: 0.9; }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .steps { display: flex; gap: 8px; margin: 24px 0; flex-wrap: wrap; }
+  .step { padding: 6px 14px; border-radius: 20px; font-size: 13px; background: #f0f0f0; color: #666; }
+  .step.active { background: #fff3cd; color: #856404; }
+  .step.done { background: #d4edda; color: #155724; }
+  .step.error { background: #f8d7da; color: #721c24; }
+  .result-block { margin-top: 16px; }
+  .result-block h3 { font-size: 15px; font-weight: 600; margin-bottom: 8px; color: #333; }
+  .result-content { background: #f8f9fa; border-radius: 8px; padding: 16px; font-size: 13px; line-height: 1.6; white-space: pre-wrap; max-height: 300px; overflow-y: auto; }
+  .download-btn { margin-top: 16px; background: #28a745; }
+  .hidden { display: none; }
+  .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid white; border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 8px; vertical-align: middle; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🤖 Агент-директолог</h1>
+  <p class="subtitle">Введите URL сайта — агент подготовит кампании для Яндекс Директ</p>
+
+  <div class="card">
+    <input type="text" id="url" placeholder="https://example.com" />
+    <input type="text" id="project" placeholder="Название проекта (например: yoga-moscow)" />
+    <button id="startBtn" onclick="startAgent()">Запустить агента</button>
+  </div>
+
+  <div class="card hidden" id="progressCard">
+    <b>Прогресс:</b>
+    <div class="steps">
+      <div class="step" id="step-audience">👥 Анализ ЦА</div>
+      <div class="step" id="step-analysis">🔍 Анализ сайта</div>
+      <div class="step" id="step-campaigns">📋 Структура кампаний</div>
+      <div class="step" id="step-ads">✍️ Объявления</div>
+      <div class="step" id="step-export-direct">📊 Экспорт</div>
+    </div>
+  </div>
+
+  <div class="card hidden" id="resultsCard">
+    <b>Результаты:</b>
+    <div id="resultsContainer"></div>
+    <button class="download-btn" onclick="downloadExcel()">⬇️ Скачать Excel для Директа</button>
+  </div>
+</div>
+
+<script>
+const stepNames = {
+  audience: '👥 Анализ ЦА',
+  analysis: '🔍 Анализ сайта',
+  campaigns: '📋 Структура кампаний',
+  ads: '✍️ Объявления',
+  'export-direct': '📊 Экспорт'
+};
+
+let currentProject = '';
+
+async function startAgent() {
+  const url = document.getElementById('url').value.trim();
+  const project = document.getElementById('project').value.trim();
+  if (!url || !project) { alert('Заполните URL и название проекта'); return; }
+
+  currentProject = project;
+  document.getElementById('startBtn').disabled = true;
+  document.getElementById('startBtn').innerHTML = '<span class="spinner"></span>Агент работает...';
+  document.getElementById('progressCard').classList.remove('hidden');
+  document.getElementById('resultsCard').classList.add('hidden');
+
+  // Активируем первый шаг
+  document.getElementById('step-audience').classList.add('active');
+
+  try {
+    const res = await fetch('/api/run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ projectName: project, siteUrl: url })
+    });
+    const data = await res.json();
+
+    // Показываем результаты
+    Object.keys(stepNames).forEach(step => {
+      const el = document.getElementById('step-' + step);
+      if (data.results[step] && !data.results[step].startsWith('Ошибка')) {
+        el.classList.remove('active');
+        el.classList.add('done');
+      } else {
+        el.classList.remove('active');
+        el.classList.add('error');
+      }
+    });
+
+    showResults(data.results);
+
+  } catch(e) {
+    alert('Ошибка: ' + e.message);
+  }
+
+  document.getElementById('startBtn').disabled = false;
+  document.getElementById('startBtn').innerHTML = 'Запустить агента';
+}
+
+function showResults(results) {
+  const container = document.getElementById('resultsContainer');
+  container.innerHTML = '';
+  const labels = {
+    audience: '👥 Целевая аудитория',
+    analysis: '🔍 Анализ сайта',
+    campaigns: '📋 Структура кампаний',
+    ads: '✍️ Объявления',
+    'export-direct': '📊 Данные для экспорта'
+  };
+  Object.entries(results).forEach(([key, value]) => {
+    const div = document.createElement('div');
+    div.className = 'result-block';
+    div.innerHTML = `<h3>${labels[key] || key}</h3><div class="result-content">${value}</div>`;
+    container.appendChild(div);
+  });
+  document.getElementById('resultsCard').classList.remove('hidden');
+}
+
+function downloadExcel() {
+  window.open(`/api/results/${currentProject}/direct-import.xlsx`);
+}
+</script>
+</body>
+</html>

@@ -1,11 +1,11 @@
-import OpenAI from "openai";
+import Anthropic from "@anthropic-ai/sdk";
 import fs from "fs-extra";
 import dotenv from "dotenv";
 import { retrieveKnowledge } from "./retrieve-knowledge.js";
 dotenv.config();
 
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+const client = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
 const projectName = process.argv[2];
@@ -101,16 +101,17 @@ ${content}
 async function run() {
 
   const response =
-    await client.chat.completions.create({
+    await client.messages.create({
 
-      model: "gpt-4.1-mini",
+      model: "claude-sonnet-4-6",
+
+      max_tokens: 4096,
+
+      stream: false,
+
+      system: systemPrompt,
 
       messages: [
-
-        {
-          role: "system",
-          content: systemPrompt,
-        },
 
         {
           role: "user",
@@ -147,8 +148,23 @@ ${resultType}
 
     });
 
-  const result =
-    response.choices[0].message.content;
+  if (!response.content || response.content.length === 0) {
+    console.error(
+      "Ошибка: response.content пуст. Полный ответ:",
+      JSON.stringify(response)
+    );
+    process.exit(1);
+  }
+
+  console.error(
+    "Блоки:",
+    response.content.map((b) => ({ type: b.type, hasText: !!b.text }))
+  );
+
+  const result = response.content
+    .filter((b) => b.type === "text")
+    .map((b) => b.text)
+    .join("\n");
 
   const savePath =
     `./projects/${projectName}/results/${resultType}.md`;
