@@ -2,17 +2,17 @@ import fs from "fs-extra";
 import axios from "axios";
 import * as cheerio from "cheerio";
 
-const url = process.argv[2];
-const projectName = process.argv[3];
+const projectName = process.argv[2];
+const url = process.argv[3];
 
-if (!url || !projectName) {
+if (!projectName || !url) {
   console.log(`
 Использование:
 
-node crawl-site.js URL PROJECT
+node crawl-site.js PROJECT URL
 
 Пример:
-node crawl-site.js https://twincitieshostels.com hostel-spb
+node crawl-site.js hostel-spb https://twincitieshostels.com
 `);
   process.exit();
 }
@@ -75,12 +75,17 @@ async function run() {
     }
   }
 
-  let result = "";
+  let result = `# КОНТЕКСТ САЙТА
+
+URL: ${url}
+Страниц собрано: ${pages.length}
+
+`;
 
   for (const page of pages) {
     result += `
 
-# PAGE
+## PAGE
 
 URL: ${page.url}
 TITLE: ${page.title}
@@ -90,7 +95,7 @@ ${page.text}
 `;
   }
 
-  const savePath = `./projects/${projectName}/raw-site-full.txt`;
+  const savePath = `./projects/${projectName}/task.md`;
 
   fs.writeFileSync(savePath, result, "utf-8");
 

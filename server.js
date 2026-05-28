@@ -3,23 +3,71 @@ import { execSync } from "child_process";
 import fs from "fs-extra";
 import path from "path";
 import { fileURLToPath } from "url";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 app.use(express.json());
 app.use(express.static("public"));
 
+const ACCESS_PASSWORD = process.env.ACCESS_PASSWORD;
+const RATE_LIMIT_MAX = 5;
+const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
+const rateLimitLog = new Map();
+
+function checkRateLimit(ip) {
+  const now = Date.now();
+  const cutoff = now - RATE_LIMIT_WINDOW_MS;
+  const recent = (rateLimitLog.get(ip) || []).filter(t => t > cutoff);
+  if (recent.length >= RATE_LIMIT_MAX) return false;
+  recent.push(now);
+  rateLimitLog.set(ip, recent);
+  return true;
+}
+
 app.post("/api/run", async (req, res) => {
-  const { projectName } = req.body;
+  const { projectName, siteUrl, password } = req.body;
+
+  if (!ACCESS_PASSWORD) {
+    return res.status(500).json({ error: "ACCESS_PASSWORD не настроен на сервере" });
+  }
+
+  if (password !== ACCESS_PASSWORD) {
+    return res.status(401).json({ error: "Неверный пароль" });
+  }
+
+  if (!checkRateLimit(req.ip)) {
+    return res.status(429).json({ error: "Превышен лимит: не более 5 запусков в час" });
+  }
+
   if (!projectName) return res.status(400).json({ error: "Нет имени проекта" });
+
+  const uniqueProjectName = `${projectName}-${Date.now()}`;
+  const projectPath = `./projects/${uniqueProjectName}`;
+
+  try {
+    execSync(`node create-project.js "${uniqueProjectName}"`, { stdio: "pipe" });
+  } catch (e) {
+    return res.status(500).json({ error: `Ошибка создания проекта: ${e.message}` });
+  }
+
+  if (siteUrl) {
+    try {
+      execSync(`node crawl-site.js "${uniqueProjectName}" "${siteUrl}"`, { stdio: "pipe" });
+    } catch (e) {
+      return res.status(500).json({ error: `Ошибка краулинга: ${e.message}` });
+    }
+  }
 
   const steps = ["audience","analysis","campaigns","ads","export-direct"];
   const results = {};
 
   for (const step of steps) {
     try {
-      execSync(`node run-agent.js ${projectName} ${step}`, { stdio: "pipe" });
-      const filePath = `./projects/${projectName}/results/${step}.md`;
+      execSync(`node run-agent.js ${uniqueProjectName} ${step}`, { stdio: "pipe" });
+      const filePath = `./projects/${uniqueProjectName}/results/${step}.md`;
       if (fs.existsSync(filePath)) {
         results[step] = fs.readFileSync(filePath, "utf-8");
       }
@@ -28,7 +76,7 @@ app.post("/api/run", async (req, res) => {
     }
   }
 
-  res.json({ success: true, results });
+  res.json({ success: true, projectName: uniqueProjectName, results });
 });
 
 app.get("/api/results/:project/:file", (req, res) => {

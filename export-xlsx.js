@@ -85,6 +85,8 @@ if (ads.length === 0) {
   process.exit();
 }
 
+const utm = "?utm_source=yandex&utm_medium=cpc&utm_campaign={campaign_name}&utm_term={keyword}";
+
 const columns = [
   "Доп. объявление группы",
   "Тип объявления",
@@ -102,37 +104,87 @@ const columns = [
   "Ссылка"
 ];
 
-const emptyRow = new Array(columns.length).fill("");
+const NCOLS = columns.length;
+const emptyRow = () => new Array(NCOLS).fill("");
 
-const aoa = [];
+function buildTextsSheet() {
+  const aoa = [];
 
-for (let i = 0; i < 8; i++) aoa.push([...emptyRow]);
+  for (let i = 0; i < 4; i++) aoa.push(emptyRow());
 
-aoa.push(columns);
+  const r5 = emptyRow();
+  r5[0] = "Предложение текстовых блоков для кампании";
+  aoa.push(r5);
 
-for (const ad of ads) {
-  aoa.push([
-    "-",
-    "Текстово-графическое",
-    "",
-    ad.group,
-    ad.groupNumber,
-    "",
-    "",
-    "",
-    ad.title1,
-    ad.title2,
-    ad.text,
-    0,
-    0,
-    ""
-  ]);
+  const r6 = emptyRow();
+  r6[0] = "Тип кампании:";
+  r6[1] = "Единая перфоманс-кампания";
+  aoa.push(r6);
+
+  const r7 = emptyRow();
+  r7[0] = "№ заказа:";
+  r7[1] = "";
+  r7[2] = "Валюта:";
+  r7[3] = "RUB";
+  aoa.push(r7);
+
+  const r8 = emptyRow();
+  r8[0] = "Минус-фразы на кампанию:";
+  r8[1] = "";
+  aoa.push(r8);
+
+  aoa.push(columns);
+
+  for (const ad of ads) {
+    aoa.push([
+      "-",
+      "Текстово-графическое",
+      "",
+      ad.group,
+      ad.groupNumber,
+      "",
+      "",
+      "",
+      ad.title1,
+      ad.title2,
+      ad.text,
+      0,
+      0,
+      utm
+    ]);
+  }
+
+  return XLSX.utils.aoa_to_sheet(aoa);
 }
 
-const worksheet = XLSX.utils.aoa_to_sheet(aoa);
-const workbook = XLSX.utils.book_new();
+function buildRegionsSheet() {
+  const aoa = [
+    [],
+    [],
+    ["Регионы"]
+  ];
+  return XLSX.utils.aoa_to_sheet(aoa);
+}
 
-XLSX.utils.book_append_sheet(workbook, worksheet, "Direct Import");
+function buildDictionarySheet() {
+  const aoa = [
+    ["Словарь значений полей"],
+    [],
+    ["Поле", "Допустимые значения"],
+    ["Доп. объявление группы", "- (основное объявление), + (дополнительное объявление)"],
+    ["Тип объявления", "Текстово-графическое, Графическое, Мобильное, Видеообъявление"],
+    ["Тип кампании", "Единая перфоманс-кампания, Текстово-графические объявления, Реклама приложений, Мастер кампаний"],
+    ["Валюта", "RUB, USD, EUR, BYN, KZT, CHF, TRY, UAH"],
+    ["Длина", "Число — длина текста объявления в символах"],
+    ["Комбинаторика", "0 — не использовать комбинаторику, 1 — использовать"]
+  ];
+  return XLSX.utils.aoa_to_sheet(aoa);
+}
+
+const workbook = XLSX.utils.book_new();
+XLSX.utils.book_append_sheet(workbook, buildTextsSheet(), "Тексты");
+XLSX.utils.book_append_sheet(workbook, buildRegionsSheet(), "Регионы");
+XLSX.utils.book_append_sheet(workbook, buildDictionarySheet(), "Словарь значений полей");
 
 XLSX.writeFile(workbook, outputPath);
 

@@ -38,6 +38,7 @@
   <div class="card">
     <input type="text" id="url" placeholder="https://example.com" />
     <input type="text" id="project" placeholder="Название проекта (например: yoga-moscow)" />
+    <input type="password" id="password" placeholder="Пароль доступа" />
     <button id="startBtn" onclick="startAgent()">Запустить агента</button>
   </div>
 
@@ -73,9 +74,9 @@ let currentProject = '';
 async function startAgent() {
   const url = document.getElementById('url').value.trim();
   const project = document.getElementById('project').value.trim();
-  if (!url || !project) { alert('Заполните URL и название проекта'); return; }
+  const password = document.getElementById('password').value;
+  if (!url || !project || !password) { alert('Заполните URL, название проекта и пароль'); return; }
 
-  currentProject = project;
   document.getElementById('startBtn').disabled = true;
   document.getElementById('startBtn').innerHTML = '<span class="spinner"></span>Агент работает...';
   document.getElementById('progressCard').classList.remove('hidden');
@@ -88,23 +89,30 @@ async function startAgent() {
     const res = await fetch('/api/run', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ projectName: project, siteUrl: url })
+      body: JSON.stringify({ projectName: project, siteUrl: url, password })
     });
     const data = await res.json();
 
-    // Показываем результаты
-    Object.keys(stepNames).forEach(step => {
-      const el = document.getElementById('step-' + step);
-      if (data.results[step] && !data.results[step].startsWith('Ошибка')) {
-        el.classList.remove('active');
-        el.classList.add('done');
-      } else {
-        el.classList.remove('active');
-        el.classList.add('error');
-      }
-    });
+    if (!res.ok) {
+      alert('Ошибка: ' + (data.error || res.status));
+      document.getElementById('progressCard').classList.add('hidden');
+    } else {
+      currentProject = data.projectName || project;
 
-    showResults(data.results);
+      // Показываем результаты
+      Object.keys(stepNames).forEach(step => {
+        const el = document.getElementById('step-' + step);
+        if (data.results[step] && !data.results[step].startsWith('Ошибка')) {
+          el.classList.remove('active');
+          el.classList.add('done');
+        } else {
+          el.classList.remove('active');
+          el.classList.add('error');
+        }
+      });
+
+      showResults(data.results);
+    }
 
   } catch(e) {
     alert('Ошибка: ' + e.message);
