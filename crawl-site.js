@@ -41,13 +41,21 @@ async function loadPage(pageUrl) {
     .trim();
 
   const links = [];
+  const baseHost = new URL(url).host;
 
   $("a").each((_, element) => {
     const href = $(element).attr("href");
     const fullUrl = normalizeUrl(pageUrl, href);
+    if (!fullUrl) return;
 
-    if (fullUrl && fullUrl.startsWith(url)) {
-      links.push(fullUrl.split("#")[0]);
+    try {
+      const parsed = new URL(fullUrl);
+      if (parsed.host !== baseHost) return;
+      const clean = parsed.origin + parsed.pathname;
+      if (clean === url) return;
+      links.push(clean);
+    } catch {
+      return;
     }
   });
 

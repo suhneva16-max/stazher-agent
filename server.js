@@ -43,6 +43,7 @@ app.post("/api/run", async (req, res) => {
   }
 
   if (!projectName) return res.status(400).json({ error: "Нет имени проекта" });
+  if (!siteUrl) return res.status(400).json({ error: "Нет URL сайта" });
 
   const uniqueProjectName = `${projectName}-${Date.now()}`;
   const projectPath = `./projects/${uniqueProjectName}`;
@@ -53,12 +54,10 @@ app.post("/api/run", async (req, res) => {
     return res.status(500).json({ error: `Ошибка создания проекта: ${e.message}` });
   }
 
-  if (siteUrl) {
-    try {
-      execSync(`node crawl-site.js "${uniqueProjectName}" "${siteUrl}"`, { stdio: "pipe" });
-    } catch (e) {
-      return res.status(500).json({ error: `Ошибка краулинга: ${e.message}` });
-    }
+  try {
+    execSync(`node crawl-site.js "${uniqueProjectName}" "${siteUrl}"`, { stdio: "pipe" });
+  } catch (e) {
+    return res.status(500).json({ error: `Ошибка краулинга: ${e.message}` });
   }
 
   const steps = ["audience","analysis","campaigns","ads","export-direct"];
