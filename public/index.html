@@ -749,15 +749,46 @@ function renderResultsList() {
     list.innerHTML = '<div class="empty" style="padding:30px;">Ещё нет результатов</div>';
     return;
   }
-  list.innerHTML = results.map(f => `
+  list.innerHTML = results.map(f => {
+    const isExportDirect = f === "export-direct.md";
+    return `
     <div class="result-row">
       <span class="result-name">${escapeHtml(f)}</span>
-      <button class="btn btn-sm" data-view="${escapeAttr(f)}">${f.endsWith(".xlsx") ? "Скачать" : "Открыть"}</button>
+      <div style="display:flex; gap:6px;">
+        ${isExportDirect ? `<button class="btn btn-sm btn-primary" data-xlsx="1">📊 Скачать Excel</button>` : ""}
+        <button class="btn btn-sm" data-view="${escapeAttr(f)}">${f.endsWith(".xlsx") ? "Скачать" : "Открыть"}</button>
+      </div>
     </div>
-  `).join("");
+  `;
+  }).join("");
   list.querySelectorAll("[data-view]").forEach(btn => {
     btn.addEventListener("click", () => viewResult(btn.dataset.view));
   });
+  list.querySelectorAll("[data-xlsx]").forEach(btn => {
+    btn.addEventListener("click", () => downloadDirectXlsx());
+  });
+}
+
+async function downloadDirectXlsx() {
+  const project = state.currentProject.name;
+  try {
+    const res = await fetch(`/api/projects/${encodeURIComponent(project)}/export-xlsx`, {
+      headers: { Authorization: "Bearer " + token },
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || ("HTTP " + res.status));
+    }
+    const blob = await res.blob();
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `${project}-direct.xlsx`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    toast("Excel скачан", "success");
+  } catch (e) {
+    toast("Ошибка: " + e.message, "error");
+  }
 }
 
 async function runTask(task) {

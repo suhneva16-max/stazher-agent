@@ -5,6 +5,7 @@ import path from "path";
 import crypto from "crypto";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
+import XLSX from "xlsx";
 
 dotenv.config();
 
@@ -261,6 +262,53 @@ app.post("/api/pipeline", auth, async (req, res) => {
   } finally {
     pipelineRunning.delete(uniqueName);
   }
+});
+
+app.get("/api/projects/:project/export-xlsx", auth, async (req, res) => {
+  const { project } = req.params;
+  if (!safeName(project)) return res.status(400).json({ error: "Некорректный проект" });
+
+  const filePath = path.join(PROJECTS_DIR, project, "results", "export-direct.md");
+  if (!(await fs.pathExists(filePath))) {
+    return res.status(404).json({ error: "Файл export-direct.md не найден. Сначала запустите задачу export-direct." });
+  }
+
+  const content = await fs.readFile(filePath, "utf-8");
+  const match = content.match(/```json\s*([\s\S]*?)```/);
+  if (!match) {
+    return res.status(400).json({ error: "В export-direct.md не найден блок ```json ... ```" });
+  }
+
+  let data;
+  try {
+    data = JSON.parse(match[1].trim());
+  } catch (e) {
+    return res.status(400).json({ error: "Ошибка парсинга JSON: " + e.message });
+  }
+  if (!Array.isArray(data)) {
+    return res.status(400).json({ error: "JSON должен быть массивом объектов" });
+  }
+
+  const headers = ["Кампания", "Группа", "Ключевая фраза", "Заголовок 1", "Текст объявления", "Ссылка"];
+  const rows = [headers, ...data.map(d => [
+    d.campaign || "",
+    d.group || "",
+    d.keyword || "",
+    d.title || "",
+    d.text || "",
+    d.url || "",
+  ])];
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws["!cols"] = [{ wch: 32 }, { wch: 32 }, { wch: 32 }, { wch: 40 }, { wch: 60 }, { wch: 40 }];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Объявления");
+
+  const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+  const encoded = encodeURIComponent(`${project}-direct.xlsx`);
+  res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+  res.setHeader("Content-Disposition", `attachment; filename="direct.xlsx"; filename*=UTF-8''${encoded}`);
+  res.send(buffer);
 });
 
 app.get("/api/projects/:project/results/:file", auth, async (req, res) => {
