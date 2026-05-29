@@ -2,9 +2,10 @@
   "name": "stazher-agent",
   "version": "1.0.0",
   "description": "GPT-агент для помощи директологу.",
-  "main": "index.js",
+  "main": "run-agent.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node run-agent.js"
   },
   "repository": {
     "type": "git",
