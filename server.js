@@ -289,30 +289,41 @@ app.get("/api/projects/:project/export-xlsx", auth, async (req, res) => {
     return res.status(400).json({ error: "JSON должен быть массивом объектов" });
   }
 
-  const headers = [
-    "Доп. объявление группы",
-    "Тип объявления",
-    "ID группы",
-    "Название группы",
-    "Номер группы",
-    "ID фразы",
-    "Фраза (с минус-словами)",
-    "ID объявления",
-    "Заголовок 1",
-    "Заголовок 2",
-    "Текст",
-    "Ссылка",
-  ];
-  const NCOLS = headers.length;
+  const NCOLS = 44;
   const emptyRow = () => new Array(NCOLS).fill("");
 
-  const aoa = [];
   const r1 = emptyRow();
   r1[0] = "Предложение текстовых блоков для кампании";
-  aoa.push(r1);
-  aoa.push(emptyRow());
-  aoa.push(emptyRow());
-  aoa.push(headers);
+
+  const r2 = emptyRow();
+  r2[3] = "Тип кампании:";
+  r2[4] = "Единая перфоманс-кампания";
+
+  const headers = emptyRow();
+  headers[0] = "Доп. объявление группы";
+  headers[1] = "Тип объявления";
+  headers[2] = "ID группы";
+  headers[3] = "Название группы";
+  headers[4] = "Номер группы";
+  headers[5] = "ID фразы";
+  headers[6] = "Фраза (с минус-словами)";
+  headers[7] = "ID объявления";
+  headers[8] = "Заголовок 1";
+  headers[9] = "Заголовок 2";
+  headers[10] = "Текст";
+  headers[11] = "Длина";
+  headers[14] = "Комбинаторика";
+  headers[40] = "Ссылка";
+  headers[41] = "Отображаемая ссылка";
+  headers[42] = "Регион";
+  headers[43] = "Организация Яндекс Бизнеса";
+
+  const subheaders = emptyRow();
+  subheaders[11] = "заголовок 1";
+  subheaders[12] = "заголовок 2";
+  subheaders[13] = "текст";
+
+  const aoa = [r1, r2, emptyRow(), headers, subheaders];
 
   let groupNumber = 0;
   let lastGroupKey = "";
@@ -324,27 +335,29 @@ app.get("/api/projects/:project/export-xlsx", auth, async (req, res) => {
       groupNumber++;
       lastGroupKey = groupKey;
     }
-    aoa.push([
-      "-",
-      "Текстово-графическое",
-      "",
-      group,
-      groupNumber,
-      "",
-      d.keyword || "",
-      "",
-      d.title || "",
-      "",
-      d.text || "",
-      d.url || "",
-    ]);
+    const row = emptyRow();
+    row[0] = "-";
+    row[1] = "Текстово-графическое";
+    row[3] = group;
+    row[4] = groupNumber;
+    row[6] = d.keyword || "";
+    row[8] = d.title || "";
+    row[10] = d.text || "";
+    row[11] = 0;
+    row[12] = 0;
+    row[13] = 0;
+    row[14] = 0;
+    row[40] = d.url || "";
+    aoa.push(row);
   }
 
   const ws = XLSX.utils.aoa_to_sheet(aoa);
-  ws["!cols"] = [
-    { wch: 22 }, { wch: 22 }, { wch: 12 }, { wch: 32 }, { wch: 14 }, { wch: 12 },
-    { wch: 36 }, { wch: 14 }, { wch: 40 }, { wch: 30 }, { wch: 60 }, { wch: 40 },
-  ];
+  const cols = new Array(NCOLS).fill({ wch: 10 });
+  cols[0] = { wch: 22 }; cols[1] = { wch: 22 }; cols[3] = { wch: 32 };
+  cols[6] = { wch: 36 }; cols[8] = { wch: 40 }; cols[9] = { wch: 30 };
+  cols[10] = { wch: 60 }; cols[40] = { wch: 40 }; cols[41] = { wch: 24 };
+  cols[42] = { wch: 16 }; cols[43] = { wch: 26 };
+  ws["!cols"] = cols;
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Тексты");
 
