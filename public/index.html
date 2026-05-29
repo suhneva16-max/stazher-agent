@@ -5,145 +5,845 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Агент-директолог</title>
 <style>
+  :root {
+    --bg: #0b0d12;
+    --bg-2: #11141b;
+    --panel: #161a24;
+    --panel-2: #1c2130;
+    --border: #262c3d;
+    --text: #e8ecf4;
+    --text-dim: #8b94a8;
+    --accent: #6c8cff;
+    --accent-2: #9b6cff;
+    --success: #4ade80;
+    --danger: #ef4444;
+    --warning: #fbbf24;
+  }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #f5f5f5; color: #1a1a1a; }
-  .container { max-width: 800px; margin: 0 auto; padding: 40px 20px; }
-  h1 { font-size: 28px; font-weight: 600; margin-bottom: 8px; }
-  .subtitle { color: #666; margin-bottom: 32px; }
-  .card { background: white; border-radius: 12px; padding: 24px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-  input { width: 100%; padding: 12px 16px; border: 1px solid #ddd; border-radius: 8px; font-size: 15px; margin-bottom: 12px; outline: none; }
-  input:focus { border-color: #0066ff; }
-  button { width: 100%; padding: 14px; background: #0066ff; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 500; cursor: pointer; transition: opacity 0.2s; }
-  button:hover { opacity: 0.9; }
-  button:disabled { opacity: 0.4; cursor: not-allowed; }
-  .steps { display: flex; gap: 8px; margin: 24px 0; flex-wrap: wrap; }
-  .step { padding: 6px 14px; border-radius: 20px; font-size: 13px; background: #f0f0f0; color: #666; }
-  .step.active { background: #fff3cd; color: #856404; }
-  .step.done { background: #d4edda; color: #155724; }
-  .step.error { background: #f8d7da; color: #721c24; }
-  .result-block { margin-top: 16px; }
-  .result-block h3 { font-size: 15px; font-weight: 600; margin-bottom: 8px; color: #333; }
-  .result-content { background: #f8f9fa; border-radius: 8px; padding: 16px; font-size: 13px; line-height: 1.6; white-space: pre-wrap; max-height: 300px; overflow-y: auto; }
-  .download-btn { margin-top: 16px; background: #28a745; }
-  .hidden { display: none; }
-  .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid white; border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 8px; vertical-align: middle; }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "SF Pro Display", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  body::before {
+    content: "";
+    position: fixed; inset: 0; z-index: -1;
+    background:
+      radial-gradient(800px circle at 10% -10%, rgba(108,140,255,0.12), transparent 50%),
+      radial-gradient(700px circle at 100% 10%, rgba(155,108,255,0.10), transparent 50%);
+    pointer-events: none;
+  }
+  .container { max-width: 1200px; margin: 0 auto; padding: 32px 24px 80px; }
+
+  /* Login */
+  .login-wrap {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px;
+  }
+  .login-card {
+    width: 100%; max-width: 400px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.45);
+  }
+  .logo {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 13px; color: var(--text-dim); margin-bottom: 24px;
+    letter-spacing: 0.08em; text-transform: uppercase;
+  }
+  .logo-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    box-shadow: 0 0 12px rgba(108,140,255,0.7);
+  }
+  h1 { font-size: 26px; font-weight: 600; margin-bottom: 8px; letter-spacing: -0.01em; }
+  h2 { font-size: 20px; font-weight: 600; margin-bottom: 16px; letter-spacing: -0.01em; }
+  .subtitle { color: var(--text-dim); margin-bottom: 24px; font-size: 14px; }
+
+  /* Inputs */
+  .field { margin-bottom: 14px; }
+  label {
+    display: block; font-size: 12px; color: var(--text-dim);
+    margin-bottom: 6px; letter-spacing: 0.04em; text-transform: uppercase;
+  }
+  input, textarea, select {
+    width: 100%;
+    padding: 11px 14px;
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 14px;
+    color: var(--text);
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  textarea { resize: vertical; min-height: 96px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
+  input:focus, textarea:focus, select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(108,140,255,0.18);
+  }
+  ::placeholder { color: #4a5063; }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 10px 16px;
+    background: var(--panel-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 14px; font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, transform 0.05s;
+    font-family: inherit;
+  }
+  .btn:hover { background: #232839; border-color: #353c52; }
+  .btn:active { transform: translateY(1px); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    border-color: transparent;
+    color: white;
+  }
+  .btn-primary:hover { filter: brightness(1.08); background: linear-gradient(135deg, var(--accent), var(--accent-2)); }
+  .btn-danger { color: #fca5a5; border-color: #4a2030; background: #2a1620; }
+  .btn-danger:hover { background: #3a1c2a; border-color: #6a2a40; }
+  .btn-full { width: 100%; }
+  .btn-sm { padding: 6px 10px; font-size: 12px; border-radius: 8px; }
+
+  /* Topbar */
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 32px;
+  }
+  .topbar-left { display: flex; align-items: center; gap: 12px; }
+  .crumb {
+    display: inline-flex; align-items: center; gap: 6px;
+    color: var(--text-dim); font-size: 14px;
+    background: none; border: none; cursor: pointer; padding: 4px 8px; border-radius: 6px;
+  }
+  .crumb:hover { color: var(--text); background: var(--panel); }
+
+  /* Project grid */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+  }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px;
+    transition: border-color 0.15s, transform 0.15s;
+  }
+  .card:hover { border-color: #353c52; }
+  .card-title {
+    font-size: 15px; font-weight: 600; margin-bottom: 6px;
+    word-break: break-word;
+  }
+  .card-meta { font-size: 12px; color: var(--text-dim); margin-bottom: 12px; }
+  .card-task {
+    font-size: 13px; color: var(--text-dim);
+    background: var(--bg-2);
+    border-radius: 8px; padding: 10px;
+    max-height: 60px; overflow: hidden;
+    margin-bottom: 14px;
+    white-space: pre-wrap;
+    position: relative;
+  }
+  .card-task::after {
+    content: ""; position: absolute; bottom: 0; left: 0; right: 0; height: 22px;
+    background: linear-gradient(to bottom, transparent, var(--bg-2));
+    pointer-events: none;
+  }
+  .card-actions { display: flex; gap: 8px; }
+
+  .empty {
+    text-align: center; padding: 60px 20px;
+    color: var(--text-dim);
+    border: 1px dashed var(--border);
+    border-radius: 14px;
+  }
+
+  /* Project view */
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 22px;
+    margin-bottom: 18px;
+  }
+  .panel-title {
+    font-size: 13px; color: var(--text-dim);
+    letter-spacing: 0.06em; text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+  .task-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 10px;
+  }
+  .task-item {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    gap: 8px;
+  }
+  .task-name { font-size: 13px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .task-status {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #2c3245; flex-shrink: 0;
+  }
+  .task-status.done { background: var(--success); box-shadow: 0 0 8px rgba(74,222,128,0.5); }
+  .task-status.running { background: var(--warning); animation: pulse 1s ease-in-out infinite; }
+  .task-status.error { background: var(--danger); }
+  @keyframes pulse { 50% { opacity: 0.3; } }
+
+  .results-list { display: flex; flex-direction: column; gap: 8px; }
+  .result-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 12px;
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+  .result-name { font-size: 13px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+  /* Modal */
+  .modal-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px;
+    z-index: 100;
+  }
+  .modal {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    width: 100%; max-width: 900px;
+    max-height: 90vh;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.6);
+  }
+  .modal-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 22px; border-bottom: 1px solid var(--border);
+  }
+  .modal-title { font-size: 16px; font-weight: 600; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .modal-body {
+    padding: 22px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-size: 13px;
+    line-height: 1.65;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .close-btn {
+    background: none; border: none; color: var(--text-dim);
+    font-size: 22px; cursor: pointer; padding: 4px 10px; border-radius: 6px;
+  }
+  .close-btn:hover { background: var(--bg-2); color: var(--text); }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 12px 18px; border-radius: 10px;
+    font-size: 13px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    z-index: 200;
+    opacity: 0; transition: opacity 0.2s, transform 0.2s;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(-4px); }
+  .toast.error { border-color: #4a2030; color: #fca5a5; }
+  .toast.success { border-color: #1f4a30; color: #86efac; }
+
+  .spinner {
+    display: inline-block; width: 14px; height: 14px;
+    border: 2px solid rgba(255,255,255,0.3); border-top-color: white;
+    border-radius: 50%; animation: spin 0.7s linear infinite;
+  }
   @keyframes spin { to { transform: rotate(360deg); } }
+
+  .hidden { display: none !important; }
+
+  /* New project form */
+  .new-project-card { margin-bottom: 18px; }
+  .row { display: flex; gap: 10px; }
+  .row > * { flex: 1; }
+
+  @media (max-width: 640px) {
+    .container { padding: 20px 14px 60px; }
+    .row { flex-direction: column; }
+  }
 </style>
 </head>
 <body>
-<div class="container">
-  <h1>🤖 Агент-директолог</h1>
-  <p class="subtitle">Введите URL сайта — агент подготовит кампании для Яндекс Директ</p>
 
-  <div class="card">
-    <input type="text" id="url" placeholder="https://example.com" />
-    <input type="text" id="project" placeholder="Название проекта (например: yoga-moscow)" />
-    <input type="password" id="password" placeholder="Пароль доступа" />
-    <button id="startBtn" onclick="startAgent()">Запустить агента</button>
-  </div>
-
-  <div class="card hidden" id="progressCard">
-    <b>Прогресс:</b>
-    <div class="steps">
-      <div class="step" id="step-audience">👥 Анализ ЦА</div>
-      <div class="step" id="step-analysis">🔍 Анализ сайта</div>
-      <div class="step" id="step-campaigns">📋 Структура кампаний</div>
-      <div class="step" id="step-ads">✍️ Объявления</div>
-      <div class="step" id="step-export-direct">📊 Экспорт</div>
+<!-- LOGIN -->
+<div id="loginView" class="login-wrap">
+  <div class="login-card">
+    <div class="logo">
+      <div class="logo-dot"></div>
+      <span>Stazher Agent</span>
     </div>
-  </div>
-
-  <div class="card hidden" id="resultsCard">
-    <b>Результаты:</b>
-    <div id="resultsContainer"></div>
-    <button class="download-btn" onclick="downloadExcel()">⬇️ Скачать Excel для Директа</button>
+    <h1>Вход</h1>
+    <p class="subtitle">Введите пароль доступа</p>
+    <form id="loginForm">
+      <div class="field">
+        <label for="loginPassword">Пароль</label>
+        <input type="password" id="loginPassword" autocomplete="current-password" required />
+      </div>
+      <button type="submit" class="btn btn-primary btn-full" id="loginBtn">Войти</button>
+    </form>
   </div>
 </div>
 
+<!-- APP -->
+<div id="appView" class="container hidden">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="logo">
+        <div class="logo-dot"></div>
+        <span>Stazher Agent</span>
+      </div>
+    </div>
+    <button class="btn btn-sm" id="logoutBtn">Выйти</button>
+  </div>
+
+  <!-- PROJECTS LIST -->
+  <div id="projectsView">
+    <h2>Проекты</h2>
+    <p class="subtitle">Создайте проект и запускайте задачи агента</p>
+
+    <div class="panel new-project-card">
+      <div class="panel-title">Пайплайн по URL</div>
+      <p class="subtitle" style="margin-bottom: 14px;">Полный цикл: создание → краулинг сайта → ЦА → анализ → кампании → объявления → экспорт</p>
+      <form id="pipelineForm">
+        <div class="row">
+          <div class="field">
+            <label for="pipelineName">База имени проекта</label>
+            <input type="text" id="pipelineName" placeholder="yoga-moscow" required />
+          </div>
+          <div class="field">
+            <label for="pipelineUrl">URL сайта</label>
+            <input type="url" id="pipelineUrl" placeholder="https://example.com" required />
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary">Запустить пайплайн</button>
+      </form>
+    </div>
+
+    <div class="panel new-project-card">
+      <div class="panel-title">Новый проект (вручную)</div>
+      <form id="newProjectForm">
+        <div class="row">
+          <div class="field">
+            <label for="newProjectName">Название</label>
+            <input type="text" id="newProjectName" placeholder="например: yoga-moscow" required />
+          </div>
+        </div>
+        <div class="field">
+          <label for="newProjectTask">Описание задачи (task.md)</label>
+          <textarea id="newProjectTask" placeholder="Опишите задачу проекта..." required></textarea>
+        </div>
+        <button type="submit" class="btn">Создать проект</button>
+      </form>
+    </div>
+
+    <div id="projectsGrid" class="grid"></div>
+  </div>
+
+  <!-- PROJECT VIEW -->
+  <div id="projectView" class="hidden">
+    <div class="topbar">
+      <div class="topbar-left">
+        <button class="crumb" id="backBtn">← К проектам</button>
+        <h2 id="projectTitle" style="margin: 0;"></h2>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Задача проекта</div>
+      <div id="projectTaskText" style="white-space: pre-wrap; font-size: 13px; color: var(--text-dim);"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Запустить задачу</div>
+      <div id="tasksGrid" class="task-list"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Результаты</div>
+      <div id="resultsList" class="results-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- PIPELINE MODAL -->
+<div id="pipelineModal" class="modal-backdrop hidden">
+  <div class="modal" style="max-width: 560px;">
+    <div class="modal-header">
+      <div class="modal-title" id="pipelineModalTitle">Пайплайн</div>
+      <button class="close-btn" id="pipelineModalClose">×</button>
+    </div>
+    <div class="modal-body" style="font-family: inherit; white-space: normal;">
+      <div id="pipelineSteps" class="results-list"></div>
+      <div id="pipelineFooter" style="margin-top: 18px; display: flex; gap: 10px; justify-content: flex-end;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div id="modal" class="modal-backdrop hidden">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle"></div>
+      <button class="close-btn" id="modalClose">×</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
 <script>
-const stepNames = {
-  audience: '👥 Анализ ЦА',
-  analysis: '🔍 Анализ сайта',
-  campaigns: '📋 Структура кампаний',
-  ads: '✍️ Объявления',
-  'export-direct': '📊 Экспорт'
+const TOKEN_KEY = "stazher_token";
+let token = localStorage.getItem(TOKEN_KEY);
+let state = {
+  view: "projects",
+  projects: [],
+  tasks: [],
+  currentProject: null,
+  runningTask: null,
 };
 
-let currentProject = '';
+// ---- API ----
+async function api(path, opts = {}) {
+  const res = await fetch(path, {
+    ...opts,
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: "Bearer " + token } : {}),
+      ...(opts.headers || {}),
+    },
+  });
+  if (res.status === 401) {
+    token = null;
+    localStorage.removeItem(TOKEN_KEY);
+    renderLogin();
+    throw new Error("Не авторизован");
+  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || ("HTTP " + res.status));
+  return data;
+}
 
-async function startAgent() {
-  const url = document.getElementById('url').value.trim();
-  const project = document.getElementById('project').value.trim();
-  const password = document.getElementById('password').value;
-  if (!url || !project || !password) { alert('Заполните URL, название проекта и пароль'); return; }
+// ---- Toast ----
+function toast(msg, type = "") {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.className = "toast show " + type;
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => { el.className = "toast " + type; }, 3000);
+}
 
-  document.getElementById('startBtn').disabled = true;
-  document.getElementById('startBtn').innerHTML = '<span class="spinner"></span>Агент работает...';
-  document.getElementById('progressCard').classList.remove('hidden');
-  document.getElementById('resultsCard').classList.add('hidden');
+// ---- Login ----
+function renderLogin() {
+  document.getElementById("loginView").classList.remove("hidden");
+  document.getElementById("appView").classList.add("hidden");
+}
+function renderApp() {
+  document.getElementById("loginView").classList.add("hidden");
+  document.getElementById("appView").classList.remove("hidden");
+  loadProjects();
+  loadTasks();
+}
 
-  // Активируем первый шаг
-  document.getElementById('step-audience').classList.add('active');
+document.getElementById("loginForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const password = document.getElementById("loginPassword").value;
+  const btn = document.getElementById("loginBtn");
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Вход...';
+  try {
+    const data = await api("/api/login", { method: "POST", body: JSON.stringify({ password }) });
+    token = data.token;
+    localStorage.setItem(TOKEN_KEY, token);
+    document.getElementById("loginPassword").value = "";
+    renderApp();
+  } catch (e) {
+    toast(e.message, "error");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Войти";
+  }
+});
+
+document.getElementById("logoutBtn").addEventListener("click", async () => {
+  try { await api("/api/logout", { method: "POST" }); } catch {}
+  token = null;
+  localStorage.removeItem(TOKEN_KEY);
+  renderLogin();
+});
+
+// ---- Projects ----
+async function loadProjects() {
+  try {
+    const data = await api("/api/projects");
+    state.projects = data.projects;
+    renderProjects();
+  } catch (e) { toast(e.message, "error"); }
+}
+
+async function loadTasks() {
+  try {
+    const data = await api("/api/tasks");
+    state.tasks = data.tasks;
+  } catch (e) { toast(e.message, "error"); }
+}
+
+function renderProjects() {
+  const grid = document.getElementById("projectsGrid");
+  if (!state.projects.length) {
+    grid.innerHTML = '<div class="empty">Пока нет проектов. Создайте первый выше.</div>';
+    return;
+  }
+  grid.innerHTML = state.projects.map(p => `
+    <div class="card">
+      <div class="card-title">${escapeHtml(p.name)}</div>
+      <div class="card-meta">${p.results.length} результат(ов)${p.createdAt ? " · " + new Date(p.createdAt).toLocaleDateString("ru-RU") : ""}</div>
+      <div class="card-task">${escapeHtml(p.task || "Без описания")}</div>
+      <div class="card-actions">
+        <button class="btn btn-sm btn-primary" data-open="${escapeAttr(p.name)}">Открыть</button>
+        <button class="btn btn-sm btn-danger" data-delete="${escapeAttr(p.name)}">Удалить</button>
+      </div>
+    </div>
+  `).join("");
+
+  grid.querySelectorAll("[data-open]").forEach(btn => {
+    btn.addEventListener("click", () => openProject(btn.dataset.open));
+  });
+  grid.querySelectorAll("[data-delete]").forEach(btn => {
+    btn.addEventListener("click", () => deleteProject(btn.dataset.delete));
+  });
+}
+
+// ---- Pipeline ----
+const PIPELINE_STEPS = [
+  { id: "create", label: "Создание проекта" },
+  { id: "crawl", label: "Краулинг сайта" },
+  { id: "audience", label: "Анализ целевой аудитории" },
+  { id: "analysis", label: "Анализ сайта" },
+  { id: "campaigns", label: "Структура кампаний" },
+  { id: "ads", label: "Объявления" },
+  { id: "export-direct", label: "Экспорт для Директа" },
+];
+
+let pipelineActive = false;
+
+function renderPipelineSteps(statuses, errors) {
+  const list = document.getElementById("pipelineSteps");
+  list.innerHTML = PIPELINE_STEPS.map(s => {
+    const status = statuses[s.id] || "";
+    const err = errors[s.id];
+    let icon = '<span class="task-status"></span>';
+    if (status === "running") icon = '<span class="spinner" style="border-color: rgba(108,140,255,0.3); border-top-color: #6c8cff;"></span>';
+    else if (status === "done") icon = '<span class="task-status done"></span>';
+    else if (status === "error") icon = '<span class="task-status error"></span>';
+    return `
+      <div class="result-row">
+        <div style="display:flex; align-items:center; gap:10px; min-width:0; flex:1;">
+          ${icon}
+          <span style="font-size:13px;">${escapeHtml(s.label)}</span>
+        </div>
+        ${err ? `<span style="font-size:11px; color:#fca5a5; max-width: 50%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeAttr(err)}">${escapeHtml(err)}</span>` : ""}
+      </div>
+    `;
+  }).join("");
+}
+
+function openPipelineModal() {
+  document.getElementById("pipelineModalTitle").textContent = "Пайплайн запущен";
+  document.getElementById("pipelineFooter").innerHTML = "";
+  renderPipelineSteps({}, {});
+  document.getElementById("pipelineModal").classList.remove("hidden");
+}
+
+function closePipelineModal() {
+  if (pipelineActive) {
+    if (!confirm("Пайплайн ещё работает. Закрыть окно? Процесс продолжится в фоне.")) return;
+  }
+  document.getElementById("pipelineModal").classList.add("hidden");
+}
+
+document.getElementById("pipelineModalClose").addEventListener("click", closePipelineModal);
+document.getElementById("pipelineModal").addEventListener("click", (e) => {
+  if (e.target.id === "pipelineModal") closePipelineModal();
+});
+
+document.getElementById("pipelineForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if (pipelineActive) { toast("Дождитесь окончания текущего пайплайна", "error"); return; }
+  const projectName = document.getElementById("pipelineName").value.trim();
+  const siteUrl = document.getElementById("pipelineUrl").value.trim();
+  if (!projectName || !siteUrl) return;
+
+  pipelineActive = true;
+  openPipelineModal();
+  const statuses = {};
+  const errors = {};
+  let resultProject = null;
 
   try {
-    const res = await fetch('/api/run', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ projectName: project, siteUrl: url, password })
+    const res = await fetch("/api/pipeline", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+      body: JSON.stringify({ projectName, siteUrl }),
     });
-    const data = await res.json();
-
-    if (!res.ok) {
-      alert('Ошибка: ' + (data.error || res.status));
-      document.getElementById('progressCard').classList.add('hidden');
-    } else {
-      currentProject = data.projectName || project;
-
-      // Показываем результаты
-      Object.keys(stepNames).forEach(step => {
-        const el = document.getElementById('step-' + step);
-        if (data.results[step] && !data.results[step].startsWith('Ошибка')) {
-          el.classList.remove('active');
-          el.classList.add('done');
-        } else {
-          el.classList.remove('active');
-          el.classList.add('error');
-        }
-      });
-
-      showResults(data.results);
+    if (!res.ok || !res.body) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || ("HTTP " + res.status));
     }
 
-  } catch(e) {
-    alert('Ошибка: ' + e.message);
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop();
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        let event;
+        try { event = JSON.parse(line); } catch { continue; }
+        if (event.projectName && !resultProject) {
+          resultProject = event.projectName;
+          document.getElementById("pipelineModalTitle").textContent = event.projectName;
+        }
+        if (event.step) {
+          statuses[event.step] = event.status;
+          if (event.status === "error") errors[event.step] = event.message || "ошибка";
+          renderPipelineSteps(statuses, errors);
+        }
+        if (event.done) {
+          const footer = document.getElementById("pipelineFooter");
+          if (event.ok) {
+            document.getElementById("pipelineModalTitle").textContent = "Готово ✓";
+            footer.innerHTML = `<button class="btn" id="pipelineCloseFinal">Закрыть</button><button class="btn btn-primary" id="pipelineOpenProject">Открыть проект</button>`;
+            document.getElementById("pipelineOpenProject").addEventListener("click", async () => {
+              document.getElementById("pipelineModal").classList.add("hidden");
+              await loadProjects();
+              if (resultProject) openProject(resultProject);
+            });
+          } else {
+            document.getElementById("pipelineModalTitle").textContent = "Пайплайн остановлен с ошибкой";
+            footer.innerHTML = `<button class="btn" id="pipelineCloseFinal">Закрыть</button>`;
+          }
+          document.getElementById("pipelineCloseFinal")?.addEventListener("click", () => {
+            document.getElementById("pipelineModal").classList.add("hidden");
+          });
+        }
+      }
+    }
+  } catch (err) {
+    toast("Ошибка пайплайна: " + err.message, "error");
+    document.getElementById("pipelineModalTitle").textContent = "Ошибка";
+    document.getElementById("pipelineFooter").innerHTML = `<button class="btn" onclick="document.getElementById('pipelineModal').classList.add('hidden')">Закрыть</button>`;
+  } finally {
+    pipelineActive = false;
+    loadProjects();
   }
+});
 
-  document.getElementById('startBtn').disabled = false;
-  document.getElementById('startBtn').innerHTML = 'Запустить агента';
+document.getElementById("newProjectForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const name = document.getElementById("newProjectName").value.trim();
+  const task = document.getElementById("newProjectTask").value.trim();
+  if (!name || !task) return;
+  try {
+    await api("/api/projects", { method: "POST", body: JSON.stringify({ name, task }) });
+    document.getElementById("newProjectName").value = "";
+    document.getElementById("newProjectTask").value = "";
+    toast("Проект создан", "success");
+    loadProjects();
+  } catch (e) { toast(e.message, "error"); }
+});
+
+async function deleteProject(name) {
+  if (!confirm(`Удалить проект "${name}"? Все результаты будут потеряны.`)) return;
+  try {
+    await api("/api/projects/" + encodeURIComponent(name), { method: "DELETE" });
+    toast("Проект удалён", "success");
+    loadProjects();
+  } catch (e) { toast(e.message, "error"); }
 }
 
-function showResults(results) {
-  const container = document.getElementById('resultsContainer');
-  container.innerHTML = '';
-  const labels = {
-    audience: '👥 Целевая аудитория',
-    analysis: '🔍 Анализ сайта',
-    campaigns: '📋 Структура кампаний',
-    ads: '✍️ Объявления',
-    'export-direct': '📊 Данные для экспорта'
-  };
-  Object.entries(results).forEach(([key, value]) => {
-    const div = document.createElement('div');
-    div.className = 'result-block';
-    div.innerHTML = `<h3>${labels[key] || key}</h3><div class="result-content">${value}</div>`;
-    container.appendChild(div);
+// ---- Project view ----
+function openProject(name) {
+  const p = state.projects.find(x => x.name === name);
+  if (!p) return;
+  state.currentProject = p;
+  state.view = "project";
+  document.getElementById("projectsView").classList.add("hidden");
+  document.getElementById("projectView").classList.remove("hidden");
+  document.getElementById("projectTitle").textContent = p.name;
+  document.getElementById("projectTaskText").textContent = p.task || "Без описания";
+  renderTasksGrid();
+  renderResultsList();
+}
+
+document.getElementById("backBtn").addEventListener("click", () => {
+  state.currentProject = null;
+  state.view = "projects";
+  document.getElementById("projectsView").classList.remove("hidden");
+  document.getElementById("projectView").classList.add("hidden");
+  loadProjects();
+});
+
+function renderTasksGrid() {
+  const grid = document.getElementById("tasksGrid");
+  const done = new Set((state.currentProject.results || []).filter(f => f.endsWith(".md")).map(f => f.replace(/\.md$/, "")));
+  grid.innerHTML = state.tasks.map(t => {
+    const isDone = done.has(t);
+    const isRunning = state.runningTask === t;
+    const status = isRunning ? "running" : (isDone ? "done" : "");
+    return `
+      <div class="task-item">
+        <div style="display:flex; align-items:center; gap:8px; min-width:0;">
+          <span class="task-status ${status}"></span>
+          <span class="task-name" title="${escapeAttr(t)}">${escapeHtml(t)}</span>
+        </div>
+        <button class="btn btn-sm" data-run="${escapeAttr(t)}" ${isRunning ? "disabled" : ""}>
+          ${isRunning ? '<span class="spinner"></span>' : "▶"}
+        </button>
+      </div>
+    `;
+  }).join("");
+  grid.querySelectorAll("[data-run]").forEach(btn => {
+    btn.addEventListener("click", () => runTask(btn.dataset.run));
   });
-  document.getElementById('resultsCard').classList.remove('hidden');
 }
 
-function downloadExcel() {
-  window.open(`/api/results/${currentProject}/direct-import.xlsx`);
+function renderResultsList() {
+  const list = document.getElementById("resultsList");
+  const results = state.currentProject.results || [];
+  if (!results.length) {
+    list.innerHTML = '<div class="empty" style="padding:30px;">Ещё нет результатов</div>';
+    return;
+  }
+  list.innerHTML = results.map(f => `
+    <div class="result-row">
+      <span class="result-name">${escapeHtml(f)}</span>
+      <button class="btn btn-sm" data-view="${escapeAttr(f)}">${f.endsWith(".xlsx") ? "Скачать" : "Открыть"}</button>
+    </div>
+  `).join("");
+  list.querySelectorAll("[data-view]").forEach(btn => {
+    btn.addEventListener("click", () => viewResult(btn.dataset.view));
+  });
 }
+
+async function runTask(task) {
+  if (state.runningTask) {
+    toast("Дождитесь окончания текущей задачи", "error");
+    return;
+  }
+  state.runningTask = task;
+  renderTasksGrid();
+  toast("Задача запущена: " + task);
+  try {
+    const res = await fetch("/api/run", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+      body: JSON.stringify({ project: state.currentProject.name, task }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || ("HTTP " + res.status));
+    toast("Готово: " + task, "success");
+    await refreshCurrentProject();
+  } catch (e) {
+    toast("Ошибка: " + e.message, "error");
+  } finally {
+    state.runningTask = null;
+    renderTasksGrid();
+  }
+}
+
+async function refreshCurrentProject() {
+  if (!state.currentProject) return;
+  const data = await api("/api/projects");
+  state.projects = data.projects;
+  const updated = state.projects.find(p => p.name === state.currentProject.name);
+  if (updated) {
+    state.currentProject = updated;
+    renderTasksGrid();
+    renderResultsList();
+  }
+}
+
+// ---- Modal ----
+async function viewResult(file) {
+  if (file.endsWith(".xlsx")) {
+    const url = `/api/projects/${encodeURIComponent(state.currentProject.name)}/results/${encodeURIComponent(file)}`;
+    const res = await fetch(url, { headers: { Authorization: "Bearer " + token } });
+    if (!res.ok) { toast("Не удалось скачать", "error"); return; }
+    const blob = await res.blob();
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = file;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    return;
+  }
+  try {
+    const res = await fetch(
+      `/api/projects/${encodeURIComponent(state.currentProject.name)}/results/${encodeURIComponent(file)}`,
+      { headers: { Authorization: "Bearer " + token } }
+    );
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const text = await res.text();
+    document.getElementById("modalTitle").textContent = file;
+    document.getElementById("modalBody").textContent = text;
+    document.getElementById("modal").classList.remove("hidden");
+  } catch (e) { toast(e.message, "error"); }
+}
+
+document.getElementById("modalClose").addEventListener("click", closeModal);
+document.getElementById("modal").addEventListener("click", (e) => {
+  if (e.target.id === "modal") closeModal();
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") closeModal();
+});
+function closeModal() {
+  document.getElementById("modal").classList.add("hidden");
+}
+
+// ---- Helpers ----
+function escapeHtml(s) {
+  return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function escapeAttr(s) { return escapeHtml(s); }
+
+// ---- Init ----
+if (token) renderApp(); else renderLogin();
 </script>
 </body>
 </html>
