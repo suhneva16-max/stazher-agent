@@ -17,6 +17,10 @@ node crawl-site.js hostel-spb https://twincitieshostels.com
   process.exit();
 }
 
+const MAX_PAGES = 5;
+const MAX_PAGE_CHARS = 10000;
+const MAX_TOTAL_CHARS = 50000;
+
 function normalizeUrl(baseUrl, link) {
   try {
     return new URL(link, baseUrl).href;
@@ -38,7 +42,8 @@ async function loadPage(pageUrl) {
   const text = $("body")
     .text()
     .replace(/\s+/g, " ")
-    .trim();
+    .trim()
+    .slice(0, MAX_PAGE_CHARS);
 
   const links = [];
   const baseHost = new URL(url).host;
@@ -70,11 +75,12 @@ async function loadPage(pageUrl) {
 async function run() {
   const firstPage = await loadPage(url);
 
-  const uniqueLinks = [...new Set(firstPage.links)].slice(0, 10);
+  const uniqueLinks = [...new Set(firstPage.links)];
 
   const pages = [firstPage];
 
   for (const link of uniqueLinks) {
+    if (pages.length >= MAX_PAGES) break;
     try {
       const page = await loadPage(link);
       pages.push(page);
@@ -101,6 +107,10 @@ TITLE: ${page.title}
 ${page.text}
 
 `;
+  }
+
+  if (result.length > MAX_TOTAL_CHARS) {
+    result = result.slice(0, MAX_TOTAL_CHARS);
   }
 
   const savePath = `./projects/${projectName}/task.md`;
