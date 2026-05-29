@@ -289,20 +289,64 @@ app.get("/api/projects/:project/export-xlsx", auth, async (req, res) => {
     return res.status(400).json({ error: "JSON должен быть массивом объектов" });
   }
 
-  const headers = ["Кампания", "Группа", "Ключевая фраза", "Заголовок 1", "Текст объявления", "Ссылка"];
-  const rows = [headers, ...data.map(d => [
-    d.campaign || "",
-    d.group || "",
-    d.keyword || "",
-    d.title || "",
-    d.text || "",
-    d.url || "",
-  ])];
+  const headers = [
+    "Доп. объявление группы",
+    "Тип объявления",
+    "ID группы",
+    "Название группы",
+    "Номер группы",
+    "ID фразы",
+    "Фраза (с минус-словами)",
+    "ID объявления",
+    "Заголовок 1",
+    "Заголовок 2",
+    "Текст",
+    "Ссылка",
+  ];
+  const NCOLS = headers.length;
+  const emptyRow = () => new Array(NCOLS).fill("");
 
-  const ws = XLSX.utils.aoa_to_sheet(rows);
-  ws["!cols"] = [{ wch: 32 }, { wch: 32 }, { wch: 32 }, { wch: 40 }, { wch: 60 }, { wch: 40 }];
+  const aoa = [];
+  const r1 = emptyRow();
+  r1[0] = "Предложение текстовых блоков для кампании";
+  aoa.push(r1);
+  aoa.push(emptyRow());
+  aoa.push(emptyRow());
+  aoa.push(headers);
+
+  let groupNumber = 0;
+  let lastGroupKey = "";
+  for (const d of data) {
+    const campaign = d.campaign || "";
+    const group = d.group || "";
+    const groupKey = `${campaign}::${group}`;
+    if (groupKey !== lastGroupKey) {
+      groupNumber++;
+      lastGroupKey = groupKey;
+    }
+    aoa.push([
+      "-",
+      "Текстово-графическое",
+      "",
+      group,
+      groupNumber,
+      "",
+      d.keyword || "",
+      "",
+      d.title || "",
+      "",
+      d.text || "",
+      d.url || "",
+    ]);
+  }
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws["!cols"] = [
+    { wch: 22 }, { wch: 22 }, { wch: 12 }, { wch: 32 }, { wch: 14 }, { wch: 12 },
+    { wch: 36 }, { wch: 14 }, { wch: 40 }, { wch: 30 }, { wch: 60 }, { wch: 40 },
+  ];
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Объявления");
+  XLSX.utils.book_append_sheet(wb, ws, "Тексты");
 
   const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
   const encoded = encodeURIComponent(`${project}-direct.xlsx`);
